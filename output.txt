@@ -1,2 +1,2 @@
-Part 1 :1722302
-Part 2: 20373490
+Part 1 - Number of safe reports: 390
+Part 2 - Number of safe reports: 439
