@@ -1,76 +1,108 @@
-function isStrictlyIncreasing(levels: number[]): boolean {
-    for (let i = 0; i < levels.length - 1; i++) {
-        if (levels[i] >= levels[i + 1]) {
-            return false;
-        }
-    }
-    return true;
+const input = await Deno.readFile("./input.txt");
+const lines = new TextDecoder().decode(input).split("\n");
+
+const j = lines.length;
+
+// part 1
+const inOrder = ["X", "M", "A", "S"];
+const inReverseOrder = inOrder.reverse();
+function findVertically(row: number, col: number, reverse: boolean): boolean {
+  const firstLetter = lines[row][col];
+  const lettersToFind = reverse ? inReverseOrder : inOrder;
+
+  const letters: string[] = [firstLetter];
+
+  for (let i = 1; i < 4; i++) {
+    const newRow = reverse ? row - i : row + i;
+    const currLetter = lines[newRow]?.[col];
+
+    letters.push(currLetter);
+  }
+  return JSON.stringify(lettersToFind) === JSON.stringify(letters);
 }
 
-function isStrictlyDecreasing(levels: number[]): boolean {
-    for (let i = 0; i < levels.length - 1; i++) {
-        if (levels[i] <= levels[i + 1]) {
-            return false;
-        }
-    }
-    return true;
+function findHorizontally(row: number, col: number, reverse: boolean): boolean {
+  const firstLetter = lines[row][col];
+  const lettersToFind = reverse ? inReverseOrder : inOrder;
+
+  const letters: string[] = [firstLetter];
+
+  for (let i = 1; i < 4; i++) {
+    const newCol = reverse ? col - i : col + i;
+    const currLetter = lines[row]?.[newCol];
+    letters.push(currLetter);
+  }
+
+  return JSON.stringify(lettersToFind) === JSON.stringify(letters);
 }
 
-function areDifferencesValid(levels: number[]): boolean {
-    for (let i = 0; i < levels.length - 1; i++) {
-        const diff = Math.abs(levels[i + 1] - levels[i]);
-        if (diff < 1 || diff > 3) {
-            return false;
-        }
-    }
-    return true;
+function findDiagonally(
+  row: number,
+  col: number,
+  where: "top-left" | "top-right" | "bottom-left" | "bottom-right"
+): boolean {
+  const firstLetter = lines[row][col];
+  const reverse = where.startsWith("top");
+  const lettersToFind = reverse ? inReverseOrder : inOrder;
+
+  const letters: string[] = [firstLetter];
+
+  for (let i = 1; i < 4; i++) {
+    const newCol = where.endsWith("-left") ? col - i : col + i;
+    const newRow = reverse ? row - i : row + i;
+    const currLetter = lines[newRow]?.[newCol];
+    letters.push(currLetter);
+  }
+  return JSON.stringify(lettersToFind) === JSON.stringify(letters);
 }
 
-function isSafeReport(levels: number[]): boolean {
-    const increasing = isStrictlyIncreasing(levels);
-    const decreasing = isStrictlyDecreasing(levels);
-    const validDifferences = areDifferencesValid(levels);
+let totalOccurences: number = 0;
 
-    return validDifferences && (increasing || decreasing);
+for (let i = 0; i < j; i++) {
+  const line = lines[i];
+  for (let k = 0; k < line.length; k++) {
+    if (findVertically(i, k, true)) totalOccurences += 1;
+    if (findVertically(i, k, false)) totalOccurences += 1;
+    if (findHorizontally(i, k, true)) totalOccurences += 1;
+    if (findHorizontally(i, k, false)) totalOccurences += 1;
+    if (findDiagonally(i, k, "top-left")) totalOccurences += 1;
+    if (findDiagonally(i, k, "bottom-left")) totalOccurences += 1;
+    if (findDiagonally(i, k, "top-right")) totalOccurences += 1;
+    if (findDiagonally(i, k, "bottom-right")) totalOccurences += 1;
+  }
+}
+console.log(totalOccurences);
+
+// part 2
+
+function findXMas(row: number, col: number): boolean {
+  const firstLetter = lines[row][col];
+  if (firstLetter !== "M" && firstLetter !== "S") return false;
+
+  const middleLetter = lines[row + 1]?.[col + 1];
+
+  if (middleLetter !== "A") return false;
+
+  const endLetter = lines[row + 2]?.[col + 2];
+  const expectedEndLetter = firstLetter === "M" ? "S" : "M";
+  if (endLetter !== expectedEndLetter) return false;
+
+  const otherFirstLetter = lines[row + 2][col];
+  if (otherFirstLetter !== "M" && otherFirstLetter !== "S") return false;
+  const otherEndLetter = lines[row]?.[col + 2];
+  const otherExpectedEndLetter = otherFirstLetter === "M" ? "S" : "M";
+  if (otherEndLetter !== otherExpectedEndLetter) return false;
+
+  return true;
 }
 
-function canBeMadeSafe(levels: number[]): boolean {
-    for (let i = 0; i < levels.length; i++) {
-        const newLevels = levels.slice(0, i).concat(levels.slice(i + 1));
-        if (isSafeReport(newLevels)) {
-            return true;
-        }
-    }
-    return false;
+let totalTrueOccurences: number = 0;
+
+for (let i = 0; i < j; i++) {
+  const line = lines[i];
+  for (let k = 0; k < line.length; k++) {
+    if (findXMas(i, k)) totalTrueOccurences += 1;
+  }
 }
 
-async function part1() {
-    const inputFile = await Deno.readTextFile('input.txt');
-    const reports = inputFile.trim().split('\n');
-
-    const safeReportsCount = reports.filter(report => isSafeReport(report.split(' ').map(Number))).length;
-
-    console.log(`Part 1 - Number of safe reports: ${safeReportsCount}`);
-
-    await Deno.writeTextFile("output.txt", `Part 1 - Number of safe reports: ${safeReportsCount}\n`);
-}
-
-async function part2() {
-    const inputFile = await Deno.readTextFile('input.txt');
-    const reports = inputFile.trim().split('\n');
-
-    let safeReportsCount = 0;
-    for (const report of reports) {
-        const levels = report.split(' ').map(Number);
-        if (isSafeReport(levels) || canBeMadeSafe(levels)) {
-            safeReportsCount++;
-        }
-    }
-
-    console.log(`Part 2 - Number of safe reports: ${safeReportsCount}`);
-
-    await Deno.writeTextFile("output.txt", `Part 2 - Number of safe reports: ${safeReportsCount}\n`, { append: true });
-}
-
-await part1();
-await part2();
+console.log(totalTrueOccurences);
